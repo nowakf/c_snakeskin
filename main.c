@@ -7,6 +7,7 @@
 
 #include "lodepng.h"
 
+//turn the buffer into a png
 void encode(const char* filename, const unsigned char* image, unsigned width, unsigned height) {
 	unsigned error = lodepng_encode32_file(filename, image, width, height);
 	if (error) { 
@@ -15,6 +16,7 @@ void encode(const char* filename, const unsigned char* image, unsigned width, un
 }
 
 int main(int argc, char ** argv) {
+	//parse command line arguments to give us height and width
 	int height, width;
 	if (argc < 3) {
 		height = 512;
@@ -23,10 +25,13 @@ int main(int argc, char ** argv) {
 		height = strtol(argv[1], NULL, 10);
 		width = strtol(argv[2], NULL, 10);
 	}
-
+	
+	//create a Lua state
 	lua_State *L;
 	L = luaL_newstate();
 	luaL_openlibs(L);
+	//load and run the lua script describing the function that
+	//should be applied to each pixel of our image
 	int status = luaL_dofile(L, "script.lua");
 
 	if (status) {
@@ -34,8 +39,9 @@ int main(int argc, char ** argv) {
 				lua_tostring(L, -1));
 		exit(1);
 	}
-
+	//allocate memory for the image
 	uint8_t *buf = malloc(width * height * 4 * sizeof(uint8_t));
+	//call the lua function
 	for (int i = 0; i < width * height; ++i) {
 		lua_getglobal(L, "foo");
 		lua_pushnumber(L, buf[i]);
@@ -56,6 +62,7 @@ int main(int argc, char ** argv) {
 		buf[i * 4 + 3] = 255;
 		lua_pop(L, 1);
 	}
+	//output the image
 	encode("out.png", buf, width, height);
 
 
